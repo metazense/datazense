@@ -1,0 +1,100 @@
+# NYC Taxi Semantic Model
+# Powered by boring-semantic-layer + Ibis + PostgreSQL
+#
+# This file defines metrics and dimensions for the NYC Yellow Taxi dataset.
+# The semantic model abstracts SQL complexity and provides consistent definitions.
+
+zones:
+  table: zones_tbl
+  primary_key: location_id
+
+  dimensions:
+    location_id: _.location_id
+    borough: _.borough
+    zone_name: _.zone_name
+    service_zone: _.service_zone
+
+  measures:
+    zone_count: _.count()
+
+payment_types:
+  table: payment_types_tbl
+  primary_key: payment_type_id
+
+  dimensions:
+    payment_type_id: _.payment_type_id
+    description: _.description
+
+  measures:
+    type_count: _.count()
+
+rate_codes:
+  table: rate_codes_tbl
+  primary_key: rate_code_id
+
+  dimensions:
+    rate_code_id: _.rate_code_id
+    description: _.description
+
+  measures:
+    code_count: _.count()
+
+trips:
+  table: trips_tbl
+  time_dimension: pickup_datetime
+
+  dimensions:
+    # Time dimensions
+    pickup_datetime: _.pickup_datetime
+    dropoff_datetime: _.dropoff_datetime
+
+    # Trip attributes
+    passenger_count: _.passenger_count
+    trip_distance: _.trip_distance
+    vendor_id: _.vendor_id
+    rate_code_id: _.rate_code_id
+    payment_type: _.payment_type
+    store_and_fwd_flag: _.store_and_fwd_flag
+
+  measures:
+    # Volume metrics
+    trip_count: _.count()
+
+    # Revenue metrics
+    total_revenue: (_.fare_amount + _.tip_amount).sum()
+    total_fare: _.fare_amount.sum()
+    total_tips: _.tip_amount.sum()
+    total_amount_sum: _.total_amount.sum()
+    avg_fare: _.fare_amount.mean()
+    avg_tip: _.tip_amount.mean()
+    avg_total: _.total_amount.mean()
+
+    # Distance metrics
+    avg_distance: _.trip_distance.mean()
+    total_distance: _.trip_distance.sum()
+    max_distance: _.trip_distance.max()
+    min_distance: _.trip_distance.min()
+
+    # Passenger metrics
+    total_passengers: _.passenger_count.sum()
+    avg_passengers: _.passenger_count.mean()
+
+    # Payment analysis
+    credit_card_trips: (_.payment_type == 1).sum()
+    cash_trips: (_.payment_type == 2).sum()
+    credit_card_rate: (_.payment_type == 1).mean()
+
+    # Airport trips (rate_code 2=JFK, 3=Newark)
+    airport_trips: ((_.rate_code_id == 2) | (_.rate_code_id == 3)).sum()
+    airport_trip_rate: ((_.rate_code_id == 2) | (_.rate_code_id == 3)).mean()
+
+    # Surcharges
+    total_tolls: _.tolls_amount.sum()
+    total_congestion: _.congestion_surcharge.sum()
+    total_airport_fee: _.airport_fee.sum()
+
+  joins:
+    pickup_zone:
+      model: zones
+      type: one
+      with: _.pickup_location_id

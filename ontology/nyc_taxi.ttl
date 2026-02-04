@@ -1,0 +1,882 @@
+@prefix : <http://example.org/nyc-taxi#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# =============================================================================
+# NYC Taxi Domain Ontology
+# =============================================================================
+# This ontology defines the domain model for NYC Yellow Taxi trip data.
+# It captures entities, relationships, and business rules that help an LLM
+# understand how concepts connect and generate accurate SQL queries.
+# =============================================================================
+
+<http://example.org/nyc-taxi> a owl:Ontology ;
+    rdfs:label "NYC Taxi Domain Ontology" ;
+    rdfs:comment "Domain model for NYC Yellow Taxi trip data analysis" ;
+    owl:versionInfo "1.0.0" .
+
+# =============================================================================
+# CLASSES (Domain Entities)
+# =============================================================================
+
+:Trip a owl:Class ;
+    rdfs:label "Trip" ;
+    rdfs:comment "A completed taxi trip from pickup to dropoff" ;
+    :mapsToTable "trips" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Metrics.TripCount" .
+
+:Location a owl:Class ;
+    rdfs:label "Location" ;
+    rdfs:comment "A TLC-defined taxi zone in NYC (265 zones total)" ;
+    :mapsToTable "zones" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Dimensions.PickupZone" .
+
+:Borough a owl:Class ;
+    rdfs:label "Borough" ;
+    rdfs:comment "One of the 5 NYC administrative districts: Manhattan, Brooklyn, Queens, Bronx, Staten Island" ;
+    :mapsToColumn "zones.borough" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Dimensions.Borough" .
+
+:PaymentType a owl:Class ;
+    rdfs:label "Payment Type" ;
+    rdfs:comment "Method of payment for the trip" ;
+    :mapsToTable "payment_types" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Dimensions.PaymentMethod" .
+
+:RateType a owl:Class ;
+    rdfs:label "Rate Type" ;
+    rdfs:comment "Fare calculation method (standard, airport flat rate, etc.)" ;
+    :mapsToTable "rate_codes" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Dimensions.RateType" .
+
+:Vendor a owl:Class ;
+    rdfs:label "Vendor" ;
+    rdfs:comment "Taxi technology provider (CMT or VeriFone)" .
+
+# -----------------------------------------------------------------------------
+# Subclasses - Borough Instances
+# -----------------------------------------------------------------------------
+
+:Manhattan a owl:Class ;
+    rdfs:subClassOf :Borough ;
+    rdfs:label "Manhattan" ;
+    rdfs:comment "NYC's central business district. Highest taxi demand and revenue." ;
+    :boroughCode "Manhattan" ;
+    :businessContext "Dominates taxi activity with ~90% of all trips. Financial district, Midtown, airports." .
+
+:Brooklyn a owl:Class ;
+    rdfs:subClassOf :Borough ;
+    rdfs:label "Brooklyn" ;
+    rdfs:comment "NYC's most populous borough" ;
+    :boroughCode "Brooklyn" .
+
+:Queens a owl:Class ;
+    rdfs:subClassOf :Borough ;
+    rdfs:label "Queens" ;
+    rdfs:comment "Contains JFK and LaGuardia airports" ;
+    :boroughCode "Queens" ;
+    :businessContext "High airport trip volume. JFK trips have flat rate." .
+
+:Bronx a owl:Class ;
+    rdfs:subClassOf :Borough ;
+    rdfs:label "Bronx" ;
+    :boroughCode "Bronx" .
+
+:StatenIsland a owl:Class ;
+    rdfs:subClassOf :Borough ;
+    rdfs:label "Staten Island" ;
+    :boroughCode "Staten Island" ;
+    :businessContext "Lowest taxi activity due to limited yellow cab service." .
+
+# -----------------------------------------------------------------------------
+# Subclasses - Payment Type Instances
+# -----------------------------------------------------------------------------
+
+:CreditCard a owl:Class ;
+    rdfs:subClassOf :PaymentType ;
+    rdfs:label "Credit Card" ;
+    :paymentCode 1 ;
+    :businessContext "Tips are recorded. ~70% of all trips." ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.BusinessConcepts.CashPayment" .
+
+:Cash a owl:Class ;
+    rdfs:subClassOf :PaymentType ;
+    rdfs:label "Cash" ;
+    :paymentCode 2 ;
+    :businessContext "Tips are NOT recorded in data. Tip analysis should exclude cash trips." ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.BusinessConcepts.CashPayment" .
+
+:NoCharge a owl:Class ;
+    rdfs:subClassOf :PaymentType ;
+    rdfs:label "No Charge" ;
+    :paymentCode 3 .
+
+:Dispute a owl:Class ;
+    rdfs:subClassOf :PaymentType ;
+    rdfs:label "Dispute" ;
+    :paymentCode 4 .
+
+# -----------------------------------------------------------------------------
+# Subclasses - Rate Type Instances
+# -----------------------------------------------------------------------------
+
+:StandardRate a owl:Class ;
+    rdfs:subClassOf :RateType ;
+    rdfs:label "Standard Rate" ;
+    :rateCode 1 ;
+    :businessContext "Metered fare based on time and distance" .
+
+:JFKFlatRate a owl:Class ;
+    rdfs:subClassOf :RateType ;
+    rdfs:label "JFK Flat Rate" ;
+    :rateCode 2 ;
+    :businessContext "Fixed $52 fare to/from JFK Airport to Manhattan. Predictable revenue." ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.BusinessConcepts.AirportTrip" .
+
+:NewarkFlatRate a owl:Class ;
+    rdfs:subClassOf :RateType ;
+    rdfs:label "Newark Flat Rate" ;
+    :rateCode 3 ;
+    :businessContext "Metered fare plus surcharge to Newark Airport." ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.BusinessConcepts.AirportTrip" .
+
+:NassauWestchester a owl:Class ;
+    rdfs:subClassOf :RateType ;
+    rdfs:label "Nassau/Westchester" ;
+    :rateCode 4 .
+
+:NegotiatedFare a owl:Class ;
+    rdfs:subClassOf :RateType ;
+    rdfs:label "Negotiated Fare" ;
+    :rateCode 5 .
+
+:GroupRide a owl:Class ;
+    rdfs:subClassOf :RateType ;
+    rdfs:label "Group Ride" ;
+    :rateCode 6 .
+
+# =============================================================================
+# OBJECT PROPERTIES (Relationships)
+# =============================================================================
+
+:hasPickupLocation a owl:ObjectProperty ;
+    rdfs:label "has pickup location" ;
+    rdfs:comment "The zone where the trip started" ;
+    rdfs:domain :Trip ;
+    rdfs:range :Location ;
+    :mapsToJoin "trips.pickup_location_id = zones.location_id" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Dimensions.PickupZone" .
+
+:hasDropoffLocation a owl:ObjectProperty ;
+    rdfs:label "has dropoff location" ;
+    rdfs:comment "The zone where the trip ended" ;
+    rdfs:domain :Trip ;
+    rdfs:range :Location ;
+    :mapsToJoin "trips.dropoff_location_id = zones.location_id" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Dimensions.DropoffZone" .
+
+:inBorough a owl:ObjectProperty ;
+    rdfs:label "in borough" ;
+    rdfs:comment "The borough containing this location" ;
+    rdfs:domain :Location ;
+    rdfs:range :Borough ;
+    :mapsToColumn "zones.borough" .
+
+:hasPaymentMethod a owl:ObjectProperty ;
+    rdfs:label "has payment method" ;
+    rdfs:comment "How the passenger paid for the trip" ;
+    rdfs:domain :Trip ;
+    rdfs:range :PaymentType ;
+    :mapsToJoin "trips.payment_type = payment_types.payment_type_id" .
+
+:hasRateType a owl:ObjectProperty ;
+    rdfs:label "has rate type" ;
+    rdfs:comment "The fare calculation method used" ;
+    rdfs:domain :Trip ;
+    rdfs:range :RateType ;
+    :mapsToJoin "trips.rate_code_id = rate_codes.rate_code_id" .
+
+:operatedBy a owl:ObjectProperty ;
+    rdfs:label "operated by" ;
+    rdfs:comment "The technology vendor for the taxi" ;
+    rdfs:domain :Trip ;
+    rdfs:range :Vendor ;
+    :mapsToColumn "trips.vendor_id" .
+
+# =============================================================================
+# DATA PROPERTIES (Attributes/Metrics)
+# =============================================================================
+
+:fareAmount a owl:DatatypeProperty ;
+    rdfs:label "fare amount" ;
+    rdfs:comment "Base fare from the meter" ;
+    rdfs:domain :Trip ;
+    rdfs:range xsd:decimal ;
+    :mapsToColumn "trips.fare_amount" ;
+    :unit "USD" .
+
+:tipAmount a owl:DatatypeProperty ;
+    rdfs:label "tip amount" ;
+    rdfs:comment "Tip paid (only recorded for credit card)" ;
+    rdfs:domain :Trip ;
+    rdfs:range xsd:decimal ;
+    :mapsToColumn "trips.tip_amount" ;
+    :unit "USD" ;
+    :businessRule "Only available for credit card payments (payment_type = 1)" .
+
+:totalAmount a owl:DatatypeProperty ;
+    rdfs:label "total amount" ;
+    rdfs:comment "Total charge including all fees" ;
+    rdfs:domain :Trip ;
+    rdfs:range xsd:decimal ;
+    :mapsToColumn "trips.total_amount" ;
+    :unit "USD" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Metrics.TotalAmount" .
+
+:tripDistance a owl:DatatypeProperty ;
+    rdfs:label "trip distance" ;
+    rdfs:comment "Distance traveled in miles" ;
+    rdfs:domain :Trip ;
+    rdfs:range xsd:decimal ;
+    :mapsToColumn "trips.trip_distance" ;
+    :unit "miles" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Metrics.TripDistance" .
+
+:pickupDatetime a owl:DatatypeProperty ;
+    rdfs:label "pickup datetime" ;
+    rdfs:comment "When the meter was engaged" ;
+    rdfs:domain :Trip ;
+    rdfs:range xsd:dateTime ;
+    :mapsToColumn "trips.pickup_datetime" .
+
+:dropoffDatetime a owl:DatatypeProperty ;
+    rdfs:label "dropoff datetime" ;
+    rdfs:comment "When the meter was disengaged" ;
+    rdfs:domain :Trip ;
+    rdfs:range xsd:dateTime ;
+    :mapsToColumn "trips.dropoff_datetime" .
+
+:passengerCount a owl:DatatypeProperty ;
+    rdfs:label "passenger count" ;
+    rdfs:comment "Number of passengers (driver reported)" ;
+    rdfs:domain :Trip ;
+    rdfs:range xsd:integer ;
+    :mapsToColumn "trips.passenger_count" .
+
+:zoneName a owl:DatatypeProperty ;
+    rdfs:label "zone name" ;
+    rdfs:comment "Name of the taxi zone" ;
+    rdfs:domain :Location ;
+    rdfs:range xsd:string ;
+    :mapsToColumn "zones.zone_name" .
+
+:locationId a owl:DatatypeProperty ;
+    rdfs:label "location ID" ;
+    rdfs:domain :Location ;
+    rdfs:range xsd:integer ;
+    :mapsToColumn "zones.location_id" .
+
+# =============================================================================
+# CUSTOM ANNOTATION PROPERTIES (for mapping to data layer)
+# =============================================================================
+
+:mapsToTable a owl:AnnotationProperty ;
+    rdfs:label "maps to table" ;
+    rdfs:comment "The database table this class represents" .
+
+:mapsToColumn a owl:AnnotationProperty ;
+    rdfs:label "maps to column" ;
+    rdfs:comment "The database column this property represents" .
+
+:mapsToJoin a owl:AnnotationProperty ;
+    rdfs:label "maps to join" ;
+    rdfs:comment "The SQL join condition for this relationship" .
+
+:glossaryTerm a owl:AnnotationProperty ;
+    rdfs:label "glossary term" ;
+    rdfs:comment "Link to OpenMetadata glossary term FQN" .
+
+:businessContext a owl:AnnotationProperty ;
+    rdfs:label "business context" ;
+    rdfs:comment "Business insight or reasoning about this concept" .
+
+:businessRule a owl:AnnotationProperty ;
+    rdfs:label "business rule" ;
+    rdfs:comment "Data quality or business logic rule" .
+
+:unit a owl:AnnotationProperty ;
+    rdfs:label "unit" ;
+    rdfs:comment "Unit of measurement" .
+
+:paymentCode a owl:AnnotationProperty ;
+    rdfs:label "payment code" ;
+    rdfs:comment "The numeric code for this payment type" .
+
+:rateCode a owl:AnnotationProperty ;
+    rdfs:label "rate code" ;
+    rdfs:comment "The numeric code for this rate type" .
+
+:boroughCode a owl:AnnotationProperty ;
+    rdfs:label "borough code" ;
+    rdfs:comment "The string identifier for this borough" .
+
+# =============================================================================
+# BUSINESS RULES (as SWRL-like annotations)
+# =============================================================================
+
+:TipAnalysisRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Tip Analysis Rule" ;
+    rdfs:comment "RULE: When analyzing tips, exclude cash payments (payment_type = 2) because cash tips are not recorded." ;
+    :appliesTo :tipAmount ;
+    :condition "payment_type != 2" ;
+    :reasoning "Cash tips are given directly to driver and not captured in the data system." .
+
+:AirportTripRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Airport Trip Rule" ;
+    rdfs:comment "RULE: Airport trips (rate_code IN (2,3)) have flat or special rates, providing predictable revenue." ;
+    :condition "rate_code_id IN (2, 3)" ;
+    :reasoning "JFK has $52 flat rate to Manhattan. Newark has metered + surcharge." .
+
+:ManhattanDominanceRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Manhattan Dominance Rule" ;
+    rdfs:comment "RULE: Manhattan generates ~90% of yellow taxi trips and revenue." ;
+    :reasoning "Business district concentration, tourist activity, limited parking drives taxi demand." .
+
+:PeakHoursRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Peak Hours Rule" ;
+    rdfs:comment "RULE: Peak demand occurs 7-9 AM and 5-8 PM on weekdays." ;
+    :condition "EXTRACT(HOUR FROM pickup_datetime) IN (7,8,9,17,18,19,20) AND EXTRACT(DOW FROM pickup_datetime) BETWEEN 1 AND 5" ;
+    :reasoning "Commuter patterns drive demand. Expect longer trip durations due to traffic." .
+
+:RevenueCalculationRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Revenue Calculation Rule" ;
+    rdfs:comment "RULE: Trip Revenue = fare_amount + tip_amount. Total Amount includes additional fees." ;
+    :formula "fare_amount + tip_amount" ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.Metrics.TripRevenue" .
+
+# =============================================================================
+# QUERY PATTERNS (help LLM understand common joins)
+# =============================================================================
+
+:RevenueByBoroughPattern a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Revenue by Borough Query Pattern" ;
+    rdfs:comment "Pattern for aggregating revenue by pickup borough" ;
+    :sqlPattern """
+        SELECT z.borough, SUM(t.fare_amount + t.tip_amount) as revenue
+        FROM trips t
+        JOIN zones z ON t.pickup_location_id = z.location_id
+        GROUP BY z.borough
+    """ ;
+    :usesRelationship :hasPickupLocation, :inBorough .
+
+:TripsByPaymentPattern a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Trips by Payment Type Query Pattern" ;
+    rdfs:comment "Pattern for analyzing trips by payment method" ;
+    :sqlPattern """
+        SELECT pt.description, COUNT(*) as trip_count, AVG(t.tip_amount) as avg_tip
+        FROM trips t
+        JOIN payment_types pt ON t.payment_type = pt.payment_type_id
+        GROUP BY pt.description
+    """ ;
+    :usesRelationship :hasPaymentMethod .
+
+# =============================================================================
+# TRIP SUBCLASSES (Classification by type)
+# =============================================================================
+
+:AirportTrip a owl:Class ;
+    rdfs:subClassOf :Trip ;
+    rdfs:label "Airport Trip" ;
+    rdfs:comment "Trip to or from an airport (JFK, LaGuardia, Newark)" ;
+    :classificationCondition "rate_code_id IN (2, 3) OR pickup_location_id IN (1, 132, 138) OR dropoff_location_id IN (1, 132, 138)" ;
+    :businessContext "Airport trips have higher average fares. JFK has flat $52 rate to Manhattan." ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.BusinessConcepts.AirportTrip" ;
+    :avgFareRange "$40-$70" ;
+    :typicalDistance "10-20 miles" .
+
+:CommuteTrip a owl:Class ;
+    rdfs:subClassOf :Trip ;
+    rdfs:label "Commute Trip" ;
+    rdfs:comment "Trip during rush hour likely for commuting purposes" ;
+    :classificationCondition "(EXTRACT(HOUR FROM pickup_datetime) BETWEEN 7 AND 9 OR EXTRACT(HOUR FROM pickup_datetime) BETWEEN 17 AND 19) AND EXTRACT(DOW FROM pickup_datetime) BETWEEN 1 AND 5" ;
+    :businessContext "Commute trips show predictable patterns. Higher demand, longer durations due to traffic." ;
+    :typicalDistance "2-5 miles" .
+
+:LongDistanceTrip a owl:Class ;
+    rdfs:subClassOf :Trip ;
+    rdfs:label "Long Distance Trip" ;
+    rdfs:comment "Trip covering more than 10 miles" ;
+    :classificationCondition "trip_distance > 10" ;
+    :businessContext "Long distance trips generate higher revenue but lower turnover. Often to/from airports or outer boroughs." ;
+    :glossaryTerm "NYCTaxiBusinessGlossary.BusinessConcepts.LongDistanceTrip" ;
+    :avgFareRange "$30-$100" .
+
+:ShortTrip a owl:Class ;
+    rdfs:subClassOf :Trip ;
+    rdfs:label "Short Trip" ;
+    rdfs:comment "Trip under 2 miles" ;
+    :classificationCondition "trip_distance < 2" ;
+    :businessContext "Short trips are high-turnover, common in Manhattan. Quick rides between neighborhoods." ;
+    :avgFareRange "$5-$15" .
+
+:NightTrip a owl:Class ;
+    rdfs:subClassOf :Trip ;
+    rdfs:label "Night Trip" ;
+    rdfs:comment "Trip between 10 PM and 5 AM" ;
+    :classificationCondition "EXTRACT(HOUR FROM pickup_datetime) >= 22 OR EXTRACT(HOUR FROM pickup_datetime) < 5" ;
+    :businessContext "Night trips often entertainment/nightlife related. Different demand patterns than daytime." .
+
+:WeekendTrip a owl:Class ;
+    rdfs:subClassOf :Trip ;
+    rdfs:label "Weekend Trip" ;
+    rdfs:comment "Trip on Saturday or Sunday" ;
+    :classificationCondition "EXTRACT(DOW FROM pickup_datetime) IN (0, 6)" ;
+    :businessContext "Weekend trips are tourism and leisure focused. Different peak hours than weekdays." .
+
+# =============================================================================
+# ZONE TYPE SUBCLASSES (Location classification)
+# =============================================================================
+
+:ZoneType a owl:Class ;
+    rdfs:label "Zone Type" ;
+    rdfs:comment "Classification of taxi zones by primary function" .
+
+:AirportZone a owl:Class ;
+    rdfs:subClassOf :ZoneType ;
+    rdfs:label "Airport Zone" ;
+    rdfs:comment "Zones containing or adjacent to airports" ;
+    :businessContext "High-value trips, flat rates available, international travelers" ;
+    :zoneIds "1, 132, 138" .
+
+:BusinessDistrict a owl:Class ;
+    rdfs:subClassOf :ZoneType ;
+    rdfs:label "Business District" ;
+    rdfs:comment "Commercial/financial zones with high weekday traffic" ;
+    :businessContext "Peak demand during business hours. Short trips common. High credit card usage." ;
+    :exampleZones "Midtown, Financial District, Flatiron" .
+
+:ResidentialZone a owl:Class ;
+    rdfs:subClassOf :ZoneType ;
+    rdfs:label "Residential Zone" ;
+    rdfs:comment "Primarily residential neighborhoods" ;
+    :businessContext "Lower taxi volume. Trips tend to go TO business districts in AM, FROM in PM." ;
+    :exampleZones "Upper East Side residential, Park Slope, Astoria" .
+
+:TouristZone a owl:Class ;
+    rdfs:subClassOf :ZoneType ;
+    rdfs:label "Tourist Zone" ;
+    rdfs:comment "Areas with high tourist activity" ;
+    :businessContext "Consistent demand across week. Higher tips from tourists. Cash payments more common." ;
+    :exampleZones "Times Square, Central Park, SoHo" .
+
+:TransitHub a owl:Class ;
+    rdfs:subClassOf :ZoneType ;
+    rdfs:label "Transit Hub" ;
+    rdfs:comment "Major transportation terminals" ;
+    :businessContext "High pickup volume. Connections to trains, buses. Peak around arrival times." ;
+    :exampleZones "Penn Station, Grand Central, Port Authority" .
+
+:EntertainmentDistrict a owl:Class ;
+    rdfs:subClassOf :ZoneType ;
+    rdfs:label "Entertainment District" ;
+    rdfs:comment "Nightlife and entertainment areas" ;
+    :businessContext "Peak demand late evening/night. High weekend volume." ;
+    :exampleZones "Theater District, Meatpacking, East Village" .
+
+# =============================================================================
+# TIME CONTEXT CLASSES
+# =============================================================================
+
+:TimeContext a owl:Class ;
+    rdfs:label "Time Context" ;
+    rdfs:comment "Time-based classification for trip analysis" .
+
+:RushHour a owl:Class ;
+    rdfs:subClassOf :TimeContext ;
+    rdfs:label "Rush Hour" ;
+    rdfs:comment "Peak commute times: 7-9 AM and 5-8 PM weekdays" ;
+    :timeCondition "(EXTRACT(HOUR FROM pickup_datetime) BETWEEN 7 AND 9 OR EXTRACT(HOUR FROM pickup_datetime) BETWEEN 17 AND 20) AND EXTRACT(DOW FROM pickup_datetime) BETWEEN 1 AND 5" ;
+    :businessContext "Highest demand, longest trip durations. Congestion surcharge more common." ;
+    :expectedDemand "HIGH" .
+
+:OffPeak a owl:Class ;
+    rdfs:subClassOf :TimeContext ;
+    rdfs:label "Off-Peak" ;
+    rdfs:comment "Mid-day hours: 10 AM - 4 PM weekdays" ;
+    :timeCondition "EXTRACT(HOUR FROM pickup_datetime) BETWEEN 10 AND 16 AND EXTRACT(DOW FROM pickup_datetime) BETWEEN 1 AND 5" ;
+    :businessContext "Moderate demand. Faster trips due to less traffic. Business and tourist mix." ;
+    :expectedDemand "MEDIUM" .
+
+:NightTime a owl:Class ;
+    rdfs:subClassOf :TimeContext ;
+    rdfs:label "Night Time" ;
+    rdfs:comment "Late night hours: 10 PM - 5 AM" ;
+    :timeCondition "EXTRACT(HOUR FROM pickup_datetime) >= 22 OR EXTRACT(HOUR FROM pickup_datetime) < 5" ;
+    :businessContext "Entertainment/nightlife trips. Lower overall volume but concentrated in certain zones." ;
+    :expectedDemand "LOW-MEDIUM" .
+
+:WeekendDay a owl:Class ;
+    rdfs:subClassOf :TimeContext ;
+    rdfs:label "Weekend Day" ;
+    rdfs:comment "Saturday and Sunday daytime hours" ;
+    :timeCondition "EXTRACT(DOW FROM pickup_datetime) IN (0, 6) AND EXTRACT(HOUR FROM pickup_datetime) BETWEEN 8 AND 20" ;
+    :businessContext "Tourism and leisure focused. Different geographic patterns than weekdays." ;
+    :expectedDemand "MEDIUM" .
+
+:WeekendNight a owl:Class ;
+    rdfs:subClassOf :TimeContext ;
+    rdfs:label "Weekend Night" ;
+    rdfs:comment "Friday and Saturday night entertainment hours" ;
+    :timeCondition "(EXTRACT(DOW FROM pickup_datetime) = 5 AND EXTRACT(HOUR FROM pickup_datetime) >= 20) OR (EXTRACT(DOW FROM pickup_datetime) = 6 AND (EXTRACT(HOUR FROM pickup_datetime) >= 20 OR EXTRACT(HOUR FROM pickup_datetime) < 4))" ;
+    :businessContext "Peak nightlife demand. High tips. Long wait times in entertainment districts." ;
+    :expectedDemand "HIGH" .
+
+# =============================================================================
+# ZONE INSTANCES (Specific important zones)
+# =============================================================================
+
+:JFKAirport a :Location, :AirportZone ;
+    rdfs:label "JFK Airport" ;
+    :locationId 132 ;
+    :borough "Queens" ;
+    :zoneType :AirportZone ;
+    :businessContext "Major international airport. Flat $52 rate to Manhattan (rate_code=2). High average fare." ;
+    :avgTripRevenue "$52-$70" .
+
+:LaGuardiaAirport a :Location, :AirportZone ;
+    rdfs:label "LaGuardia Airport" ;
+    :locationId 138 ;
+    :borough "Queens" ;
+    :zoneType :AirportZone ;
+    :businessContext "Domestic-focused airport. Metered fares. Closer to Manhattan than JFK." ;
+    :avgTripRevenue "$35-$50" .
+
+:NewarkAirport a :Location, :AirportZone ;
+    rdfs:label "Newark Airport" ;
+    :locationId 1 ;
+    :borough "EWR" ;
+    :zoneType :AirportZone ;
+    :businessContext "New Jersey airport (rate_code=3). Metered fare plus surcharge." ;
+    :avgTripRevenue "$70-$100" .
+
+:MidtownCenter a :Location, :BusinessDistrict ;
+    rdfs:label "Midtown Center" ;
+    :locationId 161 ;
+    :borough "Manhattan" ;
+    :zoneType :BusinessDistrict ;
+    :businessContext "Heart of Manhattan business district. Highest trip volume zone. Short trips common." .
+
+:MidtownEast a :Location, :BusinessDistrict ;
+    rdfs:label "Midtown East" ;
+    :locationId 162 ;
+    :borough "Manhattan" ;
+    :zoneType :BusinessDistrict ;
+    :businessContext "Grand Central area. Major transit hub with high taxi demand." .
+
+:MidtownNorth a :Location, :BusinessDistrict ;
+    rdfs:label "Midtown North" ;
+    :locationId 163 ;
+    :borough "Manhattan" ;
+    :zoneType :BusinessDistrict .
+
+:MidtownSouth a :Location, :BusinessDistrict ;
+    rdfs:label "Midtown South" ;
+    :locationId 164 ;
+    :borough "Manhattan" ;
+    :zoneType :BusinessDistrict ;
+    :businessContext "Penn Station area. Heavy commuter traffic." .
+
+:TimesSquare a :Location, :TouristZone, :EntertainmentDistrict ;
+    rdfs:label "Times Square/Theatre District" ;
+    :locationId 230 ;
+    :borough "Manhattan" ;
+    :zoneType :TouristZone ;
+    :businessContext "Tourist hotspot. High demand evenings for theater. Weekend peaks different from weekday." .
+
+:FinancialDistrictNorth a :Location, :BusinessDistrict ;
+    rdfs:label "Financial District North" ;
+    :locationId 87 ;
+    :borough "Manhattan" ;
+    :zoneType :BusinessDistrict ;
+    :businessContext "Wall Street area. Strong weekday morning demand. Lower weekend activity." .
+
+:FinancialDistrictSouth a :Location, :BusinessDistrict ;
+    rdfs:label "Financial District South" ;
+    :locationId 88 ;
+    :borough "Manhattan" ;
+    :zoneType :BusinessDistrict .
+
+:UpperEastSideNorth a :Location, :ResidentialZone ;
+    rdfs:label "Upper East Side North" ;
+    :locationId 236 ;
+    :borough "Manhattan" ;
+    :zoneType :ResidentialZone ;
+    :businessContext "Affluent residential. High tip percentages. Morning trips to Midtown common." .
+
+:UpperEastSideSouth a :Location, :ResidentialZone ;
+    rdfs:label "Upper East Side South" ;
+    :locationId 237 ;
+    :borough "Manhattan" ;
+    :zoneType :ResidentialZone .
+
+:UpperWestSideNorth a :Location, :ResidentialZone ;
+    rdfs:label "Upper West Side North" ;
+    :locationId 238 ;
+    :borough "Manhattan" ;
+    :zoneType :ResidentialZone .
+
+:UpperWestSideSouth a :Location, :ResidentialZone ;
+    rdfs:label "Upper West Side South" ;
+    :locationId 239 ;
+    :borough "Manhattan" ;
+    :zoneType :ResidentialZone ;
+    :businessContext "Near Lincoln Center. Evening entertainment demand." .
+
+:CentralPark a :Location, :TouristZone ;
+    rdfs:label "Central Park" ;
+    :locationId 43 ;
+    :borough "Manhattan" ;
+    :zoneType :TouristZone ;
+    :businessContext "Tourist destination. Dropoffs common, pickups less so." .
+
+:PennStation a :Location, :TransitHub ;
+    rdfs:label "Penn Station/Madison Sq West" ;
+    :locationId 186 ;
+    :borough "Manhattan" ;
+    :zoneType :TransitHub ;
+    :businessContext "Busiest train station in North America. Peaks around train arrival times." .
+
+:GrandCentral a :Location, :TransitHub ;
+    rdfs:label "Grand Central" ;
+    :locationId 162 ;
+    :borough "Manhattan" ;
+    :zoneType :TransitHub ;
+    :businessContext "Major Metro-North terminal. Commuter rush patterns." .
+
+:EastVillage a :Location, :EntertainmentDistrict ;
+    rdfs:label "East Village" ;
+    :locationId 79 ;
+    :borough "Manhattan" ;
+    :zoneType :EntertainmentDistrict ;
+    :businessContext "Nightlife area. Late night demand spike." .
+
+:WestVillage a :Location, :EntertainmentDistrict ;
+    rdfs:label "West Village" ;
+    :locationId 249 ;
+    :borough "Manhattan" ;
+    :zoneType :EntertainmentDistrict ;
+    :businessContext "Restaurants and bars. Evening/night peaks." .
+
+# =============================================================================
+# NEW ANNOTATION PROPERTIES
+# =============================================================================
+
+:classificationCondition a owl:AnnotationProperty ;
+    rdfs:label "classification condition" ;
+    rdfs:comment "SQL condition to classify a trip as this type" .
+
+:timeCondition a owl:AnnotationProperty ;
+    rdfs:label "time condition" ;
+    rdfs:comment "SQL condition to identify this time context" .
+
+:zoneType a owl:AnnotationProperty ;
+    rdfs:label "zone type" ;
+    rdfs:comment "The functional type of this zone" .
+
+:zoneIds a owl:AnnotationProperty ;
+    rdfs:label "zone IDs" ;
+    rdfs:comment "Location IDs belonging to this zone type" .
+
+:exampleZones a owl:AnnotationProperty ;
+    rdfs:label "example zones" ;
+    rdfs:comment "Example zone names of this type" .
+
+:avgFareRange a owl:AnnotationProperty ;
+    rdfs:label "average fare range" ;
+    rdfs:comment "Typical fare range for this trip type" .
+
+:avgTripRevenue a owl:AnnotationProperty ;
+    rdfs:label "average trip revenue" ;
+    rdfs:comment "Typical revenue for trips from this zone" .
+
+:typicalDistance a owl:AnnotationProperty ;
+    rdfs:label "typical distance" ;
+    rdfs:comment "Common trip distance for this type" .
+
+:expectedDemand a owl:AnnotationProperty ;
+    rdfs:label "expected demand" ;
+    rdfs:comment "Expected demand level (HIGH, MEDIUM, LOW)" .
+
+# =============================================================================
+# INFERENCE RULES (Trip Classification)
+# =============================================================================
+
+:TripClassificationRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Trip Classification Rule" ;
+    rdfs:comment "RULE: Classify trips by type using rate_code, distance, time, and location data." ;
+    :reasoning """
+        1. AirportTrip: rate_code IN (2,3) OR location is airport zone
+        2. LongDistanceTrip: trip_distance > 10 miles
+        3. CommuteTrip: Rush hour (7-9 AM, 5-8 PM) on weekdays
+        4. NightTrip: Between 10 PM and 5 AM
+        5. ShortTrip: trip_distance < 2 miles
+    """ .
+
+:TipPatternRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Tip Pattern Rule" ;
+    rdfs:comment "RULE: Tip patterns vary by payment type, zone type, and time of day." ;
+    :reasoning """
+        1. Cash tips (payment_type=2) are NOT recorded - exclude from tip analysis
+        2. Airport trips: Higher tips due to flat rates and tourist travelers
+        3. Business districts: Consistent 15-20% tip rates
+        4. Tourist zones: Higher tips from visitors
+        5. Night trips: Often higher tips due to late-night premium
+        6. Commute trips: Lower tips (routine daily trips)
+    """ ;
+    :sqlExample """
+        -- Tip analysis by zone type (credit card only)
+        SELECT z.zone_name,
+               AVG(t.tip_amount / NULLIF(t.fare_amount, 0)) * 100 as tip_pct
+        FROM trips t
+        JOIN zones z ON t.pickup_location_id = z.location_id
+        WHERE t.payment_type = 1  -- Credit card only
+          AND t.fare_amount > 0
+        GROUP BY z.zone_name
+    """ .
+
+:DemandPredictionRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Demand Prediction Rule" ;
+    rdfs:comment "RULE: Taxi demand follows predictable patterns based on time and location." ;
+    :reasoning """
+        1. Manhattan dominates overall demand (~90% of trips)
+        2. Rush hours (7-9 AM, 5-8 PM weekdays): Highest demand, concentrated in business districts
+        3. Midday (10 AM - 4 PM): Moderate demand, tourist and business mix
+        4. Night (10 PM - 5 AM): Entertainment districts peak, residential drops
+        5. Weekends: Tourism zones peak, business districts drop
+        6. Airport zones: Demand tied to flight schedules
+    """ .
+
+:RevenueOptimizationRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Revenue Optimization Rule" ;
+    rdfs:comment "RULE: Revenue patterns show predictable variations by trip type and location." ;
+    :reasoning """
+        1. Highest revenue: Airport trips (fixed high fares)
+        2. High revenue: Long distance trips (more miles = more fare)
+        3. High turnover/volume: Short Manhattan trips (many trips/hour)
+        4. Low revenue risk: Cash payments (no tip recorded)
+        5. Peak revenue times: Rush hours (surge in volume)
+        6. Weekend premium: Entertainment district late nights
+    """ ;
+    :metrics "total_revenue, avg_fare, trip_count, revenue_per_hour" .
+
+:ZonePerformanceRule a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Zone Performance Rule" ;
+    rdfs:comment "RULE: Zone performance metrics vary significantly by zone type." ;
+    :reasoning """
+        Business Districts: High volume during business hours, short trips, good tips
+        Airport Zones: Lower volume, high per-trip revenue, predictable fares
+        Tourist Zones: Consistent throughout week, higher tips
+        Residential: Lower volume, morning outbound to business, evening inbound
+        Transit Hubs: Spiky demand around arrival times
+        Entertainment: Night/weekend peaks, longer wait times
+    """ ;
+    :sqlExample """
+        -- Zone performance comparison
+        SELECT z.zone_name, z.borough,
+               COUNT(*) as trips,
+               AVG(t.fare_amount + t.tip_amount) as avg_revenue,
+               AVG(t.trip_distance) as avg_distance
+        FROM trips t
+        JOIN zones z ON t.pickup_location_id = z.location_id
+        GROUP BY z.zone_name, z.borough
+        ORDER BY trips DESC
+    """ .
+
+# =============================================================================
+# NEW QUERY PATTERNS (for enriched ontology)
+# =============================================================================
+
+:AirportTripAnalysisPattern a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Airport Trip Analysis Pattern" ;
+    rdfs:comment "Pattern for analyzing airport trips" ;
+    :sqlPattern """
+        SELECT
+            CASE
+                WHEN rate_code_id = 2 THEN 'JFK Flat Rate'
+                WHEN rate_code_id = 3 THEN 'Newark'
+                WHEN pickup_location_id IN (132, 138) OR dropoff_location_id IN (132, 138) THEN 'LaGuardia'
+                ELSE 'Other Airport'
+            END as airport_type,
+            COUNT(*) as trip_count,
+            AVG(fare_amount + tip_amount) as avg_revenue,
+            AVG(trip_distance) as avg_distance
+        FROM trips
+        WHERE rate_code_id IN (2, 3)
+           OR pickup_location_id IN (1, 132, 138)
+           OR dropoff_location_id IN (1, 132, 138)
+        GROUP BY airport_type
+    """ .
+
+:TimeContextAnalysisPattern a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Time Context Analysis Pattern" ;
+    rdfs:comment "Pattern for analyzing trips by time context" ;
+    :sqlPattern """
+        SELECT
+            CASE
+                WHEN (EXTRACT(HOUR FROM pickup_datetime) BETWEEN 7 AND 9
+                      OR EXTRACT(HOUR FROM pickup_datetime) BETWEEN 17 AND 20)
+                     AND EXTRACT(DOW FROM pickup_datetime) BETWEEN 1 AND 5
+                THEN 'Rush Hour'
+                WHEN EXTRACT(HOUR FROM pickup_datetime) >= 22
+                     OR EXTRACT(HOUR FROM pickup_datetime) < 5
+                THEN 'Night Time'
+                WHEN EXTRACT(DOW FROM pickup_datetime) IN (0, 6)
+                THEN 'Weekend'
+                ELSE 'Off-Peak'
+            END as time_context,
+            COUNT(*) as trip_count,
+            AVG(fare_amount + tip_amount) as avg_revenue
+        FROM trips
+        GROUP BY time_context
+    """ .
+
+:TripClassificationPattern a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:label "Trip Classification Pattern" ;
+    rdfs:comment "Pattern for classifying trips by type" ;
+    :sqlPattern """
+        SELECT
+            CASE
+                WHEN rate_code_id IN (2, 3) THEN 'Airport'
+                WHEN trip_distance > 10 THEN 'Long Distance'
+                WHEN trip_distance < 2 THEN 'Short'
+                WHEN (EXTRACT(HOUR FROM pickup_datetime) BETWEEN 7 AND 9
+                      OR EXTRACT(HOUR FROM pickup_datetime) BETWEEN 17 AND 19)
+                     AND EXTRACT(DOW FROM pickup_datetime) BETWEEN 1 AND 5
+                THEN 'Commute'
+                ELSE 'Standard'
+            END as trip_type,
+            COUNT(*) as trip_count,
+            SUM(fare_amount + tip_amount) as total_revenue,
+            AVG(tip_amount / NULLIF(fare_amount, 0)) * 100 as avg_tip_pct
+        FROM trips
+        WHERE payment_type = 1  -- Credit card for tip analysis
+        GROUP BY trip_type
+    """ .
