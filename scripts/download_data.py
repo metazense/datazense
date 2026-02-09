@@ -1,5 +1,5 @@
 """
-Download NYC Taxi data for the Intelligent Semantic Layer project.
+Download NYC Taxi data for the DataZense project.
 
 Downloads:
 - Yellow taxi trip data (1 month)

@@ -1,0 +1,444 @@
+@prefix : <http://example.org/healthcare#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# =============================================================================
+# Healthcare Domain Ontology (SNOMED CT-inspired)
+# =============================================================================
+# Domain model for synthetic healthcare data (Synthea).
+# Captures entities, relationships, business rules, and clinical context
+# to help an LLM understand healthcare analytics patterns.
+# =============================================================================
+
+<http://example.org/healthcare> a owl:Ontology ;
+    rdfs:label "Healthcare Domain Ontology" ;
+    rdfs:comment "SNOMED CT-inspired domain model for synthetic healthcare data analysis" ;
+    owl:versionInfo "1.0.0" .
+
+# =============================================================================
+# ANNOTATION PROPERTIES
+# =============================================================================
+
+:mapsToTable a owl:AnnotationProperty ;
+    rdfs:label "Maps to Table" ;
+    rdfs:comment "Database table this concept maps to" .
+
+:mapsToColumn a owl:AnnotationProperty ;
+    rdfs:label "Maps to Column" ;
+    rdfs:comment "Database column this concept maps to" .
+
+:mapsToJoin a owl:AnnotationProperty ;
+    rdfs:label "Maps to Join" ;
+    rdfs:comment "SQL JOIN condition for this relationship" .
+
+:businessContext a owl:AnnotationProperty ;
+    rdfs:label "Business Context" ;
+    rdfs:comment "Business interpretation and analysis guidance" .
+
+:classificationCondition a owl:AnnotationProperty ;
+    rdfs:label "Classification Condition" ;
+    rdfs:comment "Condition for classifying into this subclass" .
+
+:snomedCode a owl:AnnotationProperty ;
+    rdfs:label "SNOMED CT Code" ;
+    rdfs:comment "Associated SNOMED CT concept code" .
+
+:avgCostRange a owl:AnnotationProperty ;
+    rdfs:label "Average Cost Range" ;
+    rdfs:comment "Typical cost range for this concept" .
+
+:commonMedications a owl:AnnotationProperty ;
+    rdfs:label "Common Medications" ;
+    rdfs:comment "Medications commonly associated with this condition" .
+
+:condition a owl:AnnotationProperty ;
+    rdfs:label "Rule Condition" ;
+    rdfs:comment "When this rule applies" .
+
+:reasoning a owl:AnnotationProperty ;
+    rdfs:label "Reasoning" ;
+    rdfs:comment "Explanation of the rule logic" .
+
+:formula a owl:AnnotationProperty ;
+    rdfs:label "Formula" ;
+    rdfs:comment "Calculation formula" .
+
+:metrics a owl:AnnotationProperty ;
+    rdfs:label "Relevant Metrics" ;
+    rdfs:comment "Metrics relevant to this rule" .
+
+# =============================================================================
+# CORE CLASSES (8 Domain Entities)
+# =============================================================================
+
+:Patient a owl:Class ;
+    rdfs:label "Patient" ;
+    rdfs:comment "A synthetic patient with demographics and healthcare history" ;
+    :mapsToTable "patients" ;
+    :businessContext "Patients are the central entity. Demographics (gender, race, county, income) drive disparities in cost, access, and outcomes." .
+
+:Encounter a owl:Class ;
+    rdfs:label "Encounter" ;
+    rdfs:comment "A healthcare visit or interaction (primary fact table)" ;
+    :mapsToTable "encounters" ;
+    :businessContext "Encounters are the primary fact table. Each encounter has a class (emergency, inpatient, ambulatory, wellness, urgentcare), cost, and payer coverage." .
+
+:Condition a owl:Class ;
+    rdfs:label "Condition" ;
+    rdfs:comment "A diagnosed medical condition with SNOMED CT code" ;
+    :mapsToTable "conditions" ;
+    :businessContext "Conditions represent diagnoses. Chronic conditions (diabetes, hypertension) drive repeated encounters and higher lifetime cost." .
+
+:Medication a owl:Class ;
+    rdfs:label "Medication" ;
+    rdfs:comment "A prescribed medication with RxNorm code" ;
+    :mapsToTable "medications" ;
+    :businessContext "Medications contribute significantly to healthcare cost. Dispenses and total_cost track utilization." .
+
+:Procedure a owl:Class ;
+    rdfs:label "Procedure" ;
+    rdfs:comment "A medical procedure performed during an encounter" ;
+    :mapsToTable "procedures" ;
+    :businessContext "Procedures range from routine labs to major surgeries. base_cost varies enormously by type." .
+
+:Organization a owl:Class ;
+    rdfs:label "Organization" ;
+    rdfs:comment "A healthcare organization (hospital, clinic)" ;
+    :mapsToTable "organizations" ;
+    :businessContext "Organizations vary by size, location, and specialization. Revenue and utilization indicate capacity." .
+
+:Provider a owl:Class ;
+    rdfs:label "Provider" ;
+    rdfs:comment "A healthcare provider (doctor, specialist)" ;
+    :mapsToTable "providers" ;
+    :businessContext "Providers have specialities that determine encounter types and procedures performed." .
+
+:Payer a owl:Class ;
+    rdfs:label "Payer" ;
+    rdfs:comment "An insurance payer covering patient costs" ;
+    :mapsToTable "payers" ;
+    :businessContext "Payers determine coverage. amount_covered vs amount_uncovered reveals the financial burden on patients." .
+
+# =============================================================================
+# ENCOUNTER SUBCLASSES (5 types)
+# =============================================================================
+
+:EmergencyEncounter a owl:Class ;
+    rdfs:subClassOf :Encounter ;
+    rdfs:label "Emergency Encounter" ;
+    rdfs:comment "Emergency department visit" ;
+    :classificationCondition "encounter_class = 'emergency'" ;
+    :businessContext "Highest cost per encounter. Often indicates lack of preventive care or acute events. Frequent ED use is a quality metric." ;
+    :avgCostRange "$500-$5,000+" .
+
+:InpatientEncounter a owl:Class ;
+    rdfs:subClassOf :Encounter ;
+    rdfs:label "Inpatient Encounter" ;
+    rdfs:comment "Hospital admission requiring overnight stay" ;
+    :classificationCondition "encounter_class = 'inpatient'" ;
+    :businessContext "Highest total cost category. Driven by surgeries, chronic exacerbations, and complex diagnoses." ;
+    :avgCostRange "$2,000-$50,000+" .
+
+:AmbulatoryEncounter a owl:Class ;
+    rdfs:subClassOf :Encounter ;
+    rdfs:label "Ambulatory Encounter" ;
+    rdfs:comment "Outpatient office visit" ;
+    :classificationCondition "encounter_class = 'ambulatory'" ;
+    :businessContext "Most common encounter type. Routine follow-ups, specialist visits, chronic disease management." ;
+    :avgCostRange "$100-$500" .
+
+:WellnessEncounter a owl:Class ;
+    rdfs:subClassOf :Encounter ;
+    rdfs:label "Wellness Encounter" ;
+    rdfs:comment "Preventive care or wellness check" ;
+    :classificationCondition "encounter_class = 'wellness'" ;
+    :businessContext "Preventive care. Higher wellness rates correlate with lower emergency/inpatient rates. Key quality indicator." ;
+    :avgCostRange "$50-$300" .
+
+:UrgentCareEncounter a owl:Class ;
+    rdfs:subClassOf :Encounter ;
+    rdfs:label "Urgent Care Encounter" ;
+    rdfs:comment "Urgent care facility visit (not emergency)" ;
+    :classificationCondition "encounter_class = 'urgentcare'" ;
+    :businessContext "Lower-cost alternative to ED. Growth in urgent care reduces overall system costs." ;
+    :avgCostRange "$100-$1,000" .
+
+# =============================================================================
+# CONDITION SUBCLASSES (9 categories)
+# =============================================================================
+
+:ChronicCondition a owl:Class ;
+    rdfs:subClassOf :Condition ;
+    rdfs:label "Chronic Condition" ;
+    rdfs:comment "Long-term condition requiring ongoing management" ;
+    :businessContext "Chronic conditions drive 75%+ of healthcare spending. Key focus for care management programs." .
+
+:AcuteCondition a owl:Class ;
+    rdfs:subClassOf :Condition ;
+    rdfs:label "Acute Condition" ;
+    rdfs:comment "Short-term condition that resolves with treatment" ;
+    :businessContext "Acute conditions are episodic. High volume but lower per-episode cost than chronic conditions." .
+
+:Diabetes a owl:Class ;
+    rdfs:subClassOf :ChronicCondition ;
+    rdfs:label "Diabetes" ;
+    rdfs:comment "Diabetes mellitus (Type 1 or Type 2)" ;
+    :snomedCode "44054006" ;
+    :businessContext "One of the costliest chronic conditions. Requires ongoing medication, monitoring, and drives complications." ;
+    :commonMedications "Metformin, Insulin, GLP-1 agonists" .
+
+:Hypertension a owl:Class ;
+    rdfs:subClassOf :ChronicCondition ;
+    rdfs:label "Hypertension" ;
+    rdfs:comment "High blood pressure" ;
+    :snomedCode "59621000" ;
+    :businessContext "Most common chronic condition. Often comorbid with diabetes and heart disease. Medication adherence is key." ;
+    :commonMedications "ACE inhibitors, Beta blockers, Calcium channel blockers" .
+
+:CoronaryHeartDisease a owl:Class ;
+    rdfs:subClassOf :ChronicCondition ;
+    rdfs:label "Coronary Heart Disease" ;
+    rdfs:comment "Coronary artery disease and related cardiac conditions" ;
+    :snomedCode "53741008" ;
+    :businessContext "Leading cause of death. High inpatient costs from cardiac events and procedures." ;
+    :commonMedications "Statins, Aspirin, Beta blockers, ACE inhibitors" .
+
+:Asthma a owl:Class ;
+    rdfs:subClassOf :ChronicCondition ;
+    rdfs:label "Asthma" ;
+    rdfs:comment "Chronic respiratory condition with airway inflammation" ;
+    :snomedCode "195967001" ;
+    :businessContext "Common chronic condition. Emergency visits for exacerbations are costly and often preventable." ;
+    :commonMedications "Albuterol, Inhaled corticosteroids, Montelukast" .
+
+:COPD a owl:Class ;
+    rdfs:subClassOf :ChronicCondition ;
+    rdfs:label "COPD" ;
+    rdfs:comment "Chronic Obstructive Pulmonary Disease" ;
+    :snomedCode "185086009" ;
+    :businessContext "Progressive lung disease. High hospitalization rates. Readmissions are a quality measure." ;
+    :commonMedications "Bronchodilators, Inhaled steroids, Oxygen therapy" .
+
+:Depression a owl:Class ;
+    rdfs:subClassOf :ChronicCondition ;
+    rdfs:label "Depression" ;
+    rdfs:comment "Major depressive disorder" ;
+    :snomedCode "36923009" ;
+    :businessContext "Highly prevalent. Increases cost of all other conditions through comorbidity. Often underdiagnosed." ;
+    :commonMedications "SSRIs, SNRIs, Cognitive behavioral therapy" .
+
+:Cancer a owl:Class ;
+    rdfs:subClassOf :Condition ;
+    rdfs:label "Cancer" ;
+    rdfs:comment "Malignant neoplasm (various types)" ;
+    :snomedCode "363346000" ;
+    :businessContext "Highest per-patient cost. Treatment involves surgery, chemotherapy, radiation. Drives inpatient utilization." ;
+    :commonMedications "Chemotherapy agents, Targeted therapy, Immunotherapy" .
+
+# =============================================================================
+# OBJECT PROPERTIES (Relationships)
+# =============================================================================
+
+:hasPatient a owl:ObjectProperty ;
+    rdfs:label "Has Patient" ;
+    rdfs:comment "Links encounter to its patient" ;
+    rdfs:domain :Encounter ;
+    rdfs:range :Patient ;
+    :mapsToJoin "encounters.patient_id = patients.id" .
+
+:hasOrganization a owl:ObjectProperty ;
+    rdfs:label "Has Organization" ;
+    rdfs:comment "Links encounter to the healthcare organization" ;
+    rdfs:domain :Encounter ;
+    rdfs:range :Organization ;
+    :mapsToJoin "encounters.organization_id = organizations.id" .
+
+:hasPayer a owl:ObjectProperty ;
+    rdfs:label "Has Payer" ;
+    rdfs:comment "Links encounter to the insurance payer" ;
+    rdfs:domain :Encounter ;
+    rdfs:range :Payer ;
+    :mapsToJoin "encounters.payer_id = payers.id" .
+
+:hasProvider a owl:ObjectProperty ;
+    rdfs:label "Has Provider" ;
+    rdfs:comment "Links encounter to the provider" ;
+    rdfs:domain :Encounter ;
+    rdfs:range :Provider ;
+    :mapsToJoin "encounters.provider_id = providers.id" .
+
+:hasCondition a owl:ObjectProperty ;
+    rdfs:label "Has Condition" ;
+    rdfs:comment "Links encounter to diagnosed conditions" ;
+    rdfs:domain :Encounter ;
+    rdfs:range :Condition ;
+    :mapsToJoin "conditions.encounter_id = encounters.id" .
+
+:hasMedication a owl:ObjectProperty ;
+    rdfs:label "Has Medication" ;
+    rdfs:comment "Links encounter to prescribed medications" ;
+    rdfs:domain :Encounter ;
+    rdfs:range :Medication ;
+    :mapsToJoin "medications.encounter_id = encounters.id" .
+
+:hasProcedure a owl:ObjectProperty ;
+    rdfs:label "Has Procedure" ;
+    rdfs:comment "Links encounter to performed procedures" ;
+    rdfs:domain :Encounter ;
+    rdfs:range :Procedure ;
+    :mapsToJoin "procedures.encounter_id = encounters.id" .
+
+:belongsToOrganization a owl:ObjectProperty ;
+    rdfs:label "Belongs to Organization" ;
+    rdfs:comment "Links provider to their organization" ;
+    rdfs:domain :Provider ;
+    rdfs:range :Organization ;
+    :mapsToJoin "providers.organization_id = organizations.id" .
+
+# =============================================================================
+# DATA PROPERTIES
+# =============================================================================
+
+:hasEncounterClass a owl:DatatypeProperty ;
+    rdfs:label "Encounter Class" ;
+    rdfs:domain :Encounter ;
+    rdfs:comment "Type of encounter: emergency, inpatient, ambulatory, wellness, urgentcare" ;
+    :mapsToColumn "encounters.encounter_class" .
+
+:hasTotalClaimCost a owl:DatatypeProperty ;
+    rdfs:label "Total Claim Cost" ;
+    rdfs:domain :Encounter ;
+    rdfs:comment "Total billed cost for the encounter" ;
+    :mapsToColumn "encounters.total_claim_cost" ;
+    :businessContext "Primary cost metric. Sum of all charges for the visit." .
+
+:hasPayerCoverage a owl:DatatypeProperty ;
+    rdfs:label "Payer Coverage" ;
+    rdfs:domain :Encounter ;
+    rdfs:comment "Amount covered by insurance" ;
+    :mapsToColumn "encounters.payer_coverage" ;
+    :businessContext "Insurance payment. Out-of-pocket = total_claim_cost - payer_coverage." .
+
+:hasGender a owl:DatatypeProperty ;
+    rdfs:label "Gender" ;
+    rdfs:domain :Patient ;
+    :mapsToColumn "patients.gender" .
+
+:hasRace a owl:DatatypeProperty ;
+    rdfs:label "Race" ;
+    rdfs:domain :Patient ;
+    :mapsToColumn "patients.race" ;
+    :businessContext "Demographic factor. Disparities in healthcare access and outcomes exist across racial groups." .
+
+:hasIncome a owl:DatatypeProperty ;
+    rdfs:label "Income" ;
+    rdfs:domain :Patient ;
+    :mapsToColumn "patients.income" ;
+    :businessContext "Socioeconomic factor. Lower income correlates with higher emergency utilization and lower preventive care." .
+
+:hasCounty a owl:DatatypeProperty ;
+    rdfs:label "County" ;
+    rdfs:domain :Patient ;
+    :mapsToColumn "patients.county" ;
+    :businessContext "Geographic dimension. Rural vs urban affects access, cost, and provider availability." .
+
+# =============================================================================
+# BUSINESS RULES (7 rules with RULE: prefix)
+# =============================================================================
+
+:CostCalculationRule a owl:Class ;
+    rdfs:label "Cost Calculation Rule" ;
+    rdfs:comment "RULE: Out-of-pocket cost equals total_claim_cost minus payer_coverage. This is the patient's financial burden." ;
+    :condition "Any encounter analysis" ;
+    :reasoning """Out-of-pocket = total_claim_cost - payer_coverage.
+Higher out-of-pocket indicates gaps in insurance coverage.
+Patients with high out-of-pocket may delay care, leading to worse outcomes.""" ;
+    :formula "out_of_pocket = total_claim_cost - payer_coverage" ;
+    :metrics "total_claim_cost, payer_coverage, total_out_of_pocket, avg_out_of_pocket" .
+
+:ChronicCostRule a owl:Class ;
+    rdfs:label "Chronic Condition Cost Rule" ;
+    rdfs:comment "RULE: Chronic conditions (diabetes, hypertension, COPD) account for 75%+ of total healthcare spending. Patients with multiple chronic conditions have exponentially higher costs." ;
+    :condition "Condition-based cost analysis" ;
+    :reasoning """Chronic conditions require ongoing management with repeated encounters.
+Comorbidities multiply cost: diabetes + hypertension costs more than sum of parts.
+Preventive management reduces emergency and inpatient costs.""" ;
+    :metrics "condition_count, total_claim_cost, encounter_count" .
+
+:ReadmissionRule a owl:Class ;
+    rdfs:label "Readmission Rule" ;
+    rdfs:comment "RULE: Patients readmitted within 30 days of discharge indicate quality-of-care issues. High readmission rates suggest inadequate discharge planning or follow-up." ;
+    :condition "Inpatient encounter followed by another within 30 days" ;
+    :reasoning """30-day readmission is a CMS quality measure.
+High rates trigger financial penalties for hospitals.
+Common for heart failure, COPD, and pneumonia.""" ;
+    :metrics "encounter_count, inpatient_count" .
+
+:EmergencyOveruseRule a owl:Class ;
+    rdfs:label "Emergency Overuse Rule" ;
+    rdfs:comment "RULE: High emergency department utilization relative to ambulatory/wellness visits suggests lack of primary care access. This drives up costs and indicates systemic access issues." ;
+    :condition "High emergency_count relative to wellness_count" ;
+    :reasoning """Emergency visits cost 5-10x more than ambulatory visits for similar conditions.
+Frequent ED users often lack primary care providers.
+Demographic and geographic disparities drive ED overuse.""" ;
+    :metrics "emergency_count, wellness_count, ambulatory_count, encounter_count" .
+
+:DemographicDisparityRule a owl:Class ;
+    rdfs:label "Demographic Disparity Rule" ;
+    rdfs:comment "RULE: Healthcare costs, access, and outcomes vary significantly by race, income, and geography. Lower-income and minority populations often have higher emergency utilization and lower preventive care." ;
+    :condition "Demographic-stratified analysis" ;
+    :reasoning """Social determinants of health (income, education, geography) affect outcomes.
+Racial disparities persist even after controlling for income.
+Rural areas have fewer providers and longer travel times.""" ;
+    :metrics "encounter_count, emergency_count, wellness_count, avg_claim_cost" .
+
+:CoverageGapRule a owl:Class ;
+    rdfs:label "Coverage Gap Rule" ;
+    rdfs:comment "RULE: When payer_coverage is low relative to total_claim_cost, patients face high out-of-pocket burden. This leads to delayed care, medication non-adherence, and worse outcomes." ;
+    :condition "payer_coverage < 50% of total_claim_cost" ;
+    :reasoning """Coverage ratio = payer_coverage / total_claim_cost.
+Low coverage ratio means high patient burden.
+Medication costs are often the first thing patients cut.""" ;
+    :formula "coverage_ratio = payer_coverage / total_claim_cost" ;
+    :metrics "total_claim_cost, total_payer_coverage, total_out_of_pocket" .
+
+:PreventiveCareRule a owl:Class ;
+    rdfs:label "Preventive Care Rule" ;
+    rdfs:comment "RULE: Higher rates of wellness encounters correlate with lower emergency and inpatient utilization. Preventive care is the most cost-effective intervention." ;
+    :condition "Wellness encounter rate analysis" ;
+    :reasoning """Wellness visits catch conditions early before they become emergencies.
+Every $1 spent on preventive care saves $3-5 in acute care.
+Populations with high wellness rates have lower per-capita costs.""" ;
+    :metrics "wellness_count, emergency_count, inpatient_count, total_claim_cost" .
+
+# =============================================================================
+# ADDITIONAL CONCEPTS
+# =============================================================================
+
+:SocialDeterminant a owl:Class ;
+    rdfs:label "Social Determinant of Health" ;
+    rdfs:comment "Non-medical factors that influence health outcomes: income, education, geography, race" ;
+    :businessContext "SDOH explain more variance in health outcomes than clinical care. Income and geography are the strongest predictors." .
+
+:CareGap a owl:Class ;
+    rdfs:label "Care Gap" ;
+    rdfs:comment "A gap between recommended and actual care delivery" ;
+    :businessContext "Care gaps indicate opportunities for intervention. Common gaps: missed screenings, medication non-adherence, lack of follow-up." .
+
+:Comorbidity a owl:Class ;
+    rdfs:label "Comorbidity" ;
+    rdfs:comment "Presence of multiple concurrent conditions in a patient" ;
+    :businessContext "Comorbidities exponentially increase cost and complexity. Diabetes + hypertension + depression is a common high-cost triad." .
+
+:CostDriver a owl:Class ;
+    rdfs:label "Cost Driver" ;
+    rdfs:comment "Factor that significantly impacts healthcare spending" ;
+    :businessContext "Major cost drivers: inpatient stays, chronic disease management, specialty medications, emergency overuse." .
+
+:QualityMeasure a owl:Class ;
+    rdfs:label "Quality Measure" ;
+    rdfs:comment "Metric used to assess healthcare quality" ;
+    :businessContext "Key measures: readmission rates, ED utilization, preventive screening rates, medication adherence." .

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Mini Fabric IQ Demo - Intelligent Semantic Layer
+Mini Fabric IQ Demo - DataZense
 
 This script demonstrates a small-scale proof-of-concept comparable to:
 - Microsoft Fabric IQ
@@ -286,7 +286,7 @@ def main():
     """Run the Fabric IQ demo."""
     print()
     print("=" * 70)
-    print("  MINI FABRIC IQ - Intelligent Semantic Layer Demo")
+    print("  MINI FABRIC IQ - DataZense Demo")
     print("  OpenMetadata + Semantic Layer + Ontology + AI Agent")
     print("=" * 70)
 

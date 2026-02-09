@@ -1,4 +1,4 @@
-# Intelligent Semantic Layer - Docker Compose
+# DataZense by metazense - Docker Compose
 # Uses official OpenMetadata 1.7.1 with PostgreSQL backend
 
 volumes:
@@ -38,6 +38,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Note: taxi_user also has access to the 'healthcare' database
+    # created by docker/init-scripts/02-healthcare-schema.sql
 
   # ===========================================
   # OpenMetadata PostgreSQL (metadata storage)

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "intelligent-semantic-layer"
+name = "datazense"
 version = "0.1.0"
-description = "Intelligent Semantic Layer combining Technical, Semantic, and Ontology metadata layers"
+description = "DataZense by metazense - Making sense of your data through 3 AI layers"
 requires-python = ">=3.11"
 dependencies = [
     # Data processing

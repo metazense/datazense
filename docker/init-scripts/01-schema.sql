@@ -1,5 +1,5 @@
 -- NYC Taxi Database Schema
--- This schema supports the Intelligent Semantic Layer project
+-- This schema supports the DataZense project
 
 -- Payment types lookup table
 CREATE TABLE payment_types (
