@@ -60,7 +60,7 @@ export function MetricChart({ data }: { data: ChartData }) {
             />
             <Bar
               dataKey="value"
-              fill="hsl(220, 70%, 55%)"
+              fill="#8142ff"
               radius={[0, 4, 4, 0]}
               barSize={24}
             />

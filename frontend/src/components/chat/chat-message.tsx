@@ -39,7 +39,7 @@ export function ChatMessage({ message, onSuggestionClick }: Props) {
     return (
       <div className="flex items-start gap-3 max-w-[85%]">
         <Avatar className="h-8 w-8 shrink-0">
-          <AvatarFallback className="bg-emerald-600 text-white text-xs">
+          <AvatarFallback className="bg-[#8142ff] text-white text-xs">
             AI
           </AvatarFallback>
         </Avatar>
@@ -60,7 +60,7 @@ export function ChatMessage({ message, onSuggestionClick }: Props) {
   return (
     <div className="flex items-start gap-3 max-w-[85%]">
       <Avatar className="h-8 w-8 shrink-0">
-        <AvatarFallback className="bg-emerald-600 text-white text-xs">
+        <AvatarFallback className="bg-[#8142ff] text-white text-xs">
           AI
         </AvatarFallback>
       </Avatar>

@@ -43,7 +43,7 @@ export function ChatInput({ onSend, disabled, dataset = "nyc_taxi" }: Props) {
         disabled={disabled}
         className="flex-1"
       />
-      <Button onClick={submit} disabled={disabled || !value.trim()}>
+      <Button onClick={submit} disabled={disabled || !value.trim()} className="bg-[#8142ff] hover:bg-[#6329d7] text-white">
         {disabled ? (
           <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
         ) : (

@@ -37,16 +37,14 @@ export function ChatInterface({ dataset }: Props) {
 
   const isEmpty = messages.length === 0;
   const questions = STARTER_QUESTIONS[dataset];
-  const accentClass = dataset === "healthcare" ? "text-blue-600" : "text-emerald-600";
-
   return (
     <div className="flex h-full flex-col">
       {isEmpty ? (
         /* ── Hero / empty state ──────────────────────────────────── */
         <div className="flex flex-1 flex-col items-center justify-center px-4">
           <div className="mx-auto max-w-lg text-center">
-            <h2 className="text-3xl font-bold tracking-tight">
-              Ask your data <span className={accentClass}>WHY</span>,
+            <h2 className="font-display text-3xl font-medium tracking-tight">
+              Ask your data <span className="gradient-text">WHY</span>,
               <br />
               not just <span className="text-muted-foreground">WHAT</span>
             </h2>

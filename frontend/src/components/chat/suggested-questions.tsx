@@ -29,7 +29,7 @@ export function SuggestedQuestions({
         {questions.map((q, i) => (
           <Card
             key={i}
-            className="cursor-pointer px-4 py-3 transition-colors hover:bg-muted/60"
+            className="cursor-pointer px-4 py-3 transition-all hover:bg-[#8142ff]/5 hover:border-[#8142ff]/30"
             onClick={() => onSelect(q)}
           >
             <div className="flex items-start gap-3">
